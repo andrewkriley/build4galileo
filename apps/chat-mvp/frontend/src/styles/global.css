@@ -6,11 +6,12 @@
 
 body {
   margin: 0;
-  background: var(--b4g-color-brand-surface);
-  color: var(--b4g-color-semantic-text);
-  font-family: var(--b4g-font-body);
-  font-size: var(--b4g-font-size-md);
-  line-height: var(--b4g-font-line-height-normal);
+  background: var(--b4g-color-bg-canvas);
+  color: var(--b4g-color-text-primary);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: var(--b4g-type-body-size);
+  line-height: var(--b4g-type-body-line-height);
 }
 
 #root {
@@ -36,39 +37,53 @@ body {
 }
 
 .chat-window__header h1 {
-  font-family: var(--b4g-font-heading);
-  font-size: var(--b4g-font-size-xl);
-  font-weight: var(--b4g-font-weight-semibold);
+  font-size: var(--b4g-type-display-size);
+  font-weight: var(--b4g-type-display-weight);
+  line-height: var(--b4g-type-display-line-height);
   margin: 0;
 }
 
+.chat-window__session-note {
+  margin: calc(-1 * var(--b4g-space-sm)) 0 0;
+  color: var(--b4g-color-text-muted);
+  font-size: var(--b4g-type-caption-size);
+  line-height: var(--b4g-type-caption-line-height);
+}
+
+.chat-window__session-note code {
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.95em;
+}
+
 .chat-window__error {
-  background: var(--b4g-color-brand-accent-soft);
-  color: var(--b4g-color-neutral-0);
+  background: var(--b4g-color-accent-danger);
+  color: var(--b4g-color-on-accent);
   border-radius: var(--b4g-radius-sm);
   padding: var(--b4g-space-sm) var(--b4g-space-md);
-  font-size: var(--b4g-font-size-sm);
+  font-size: var(--b4g-type-caption-size);
+  line-height: var(--b4g-type-caption-line-height);
 }
 
 .provider-selector {
-  font-family: var(--b4g-font-body);
-  font-size: var(--b4g-font-size-sm);
+  font-size: var(--b4g-type-caption-size);
+  line-height: var(--b4g-type-caption-line-height);
   padding: var(--b4g-space-xs) var(--b4g-space-sm);
   border-radius: var(--b4g-radius-sm);
-  border: 1px solid var(--b4g-color-neutral-200);
-  background: var(--b4g-color-neutral-900);
-  color: var(--b4g-color-semantic-text);
+  border: 1px solid var(--b4g-color-border-default);
+  background: var(--b4g-color-bg-panel);
+  color: var(--b4g-color-text-primary);
 }
 
 .provider-selector--empty {
-  color: var(--b4g-color-semantic-text-muted);
-  font-size: var(--b4g-font-size-sm);
+  color: var(--b4g-color-text-muted);
+  font-size: var(--b4g-type-caption-size);
+  line-height: var(--b4g-type-caption-line-height);
 }
 
 .message-list {
-  background: var(--b4g-color-neutral-900);
-  border: 1px solid var(--b4g-color-neutral-200);
-  border-radius: var(--b4g-radius-lg);
+  background: var(--b4g-color-bg-panel);
+  border: 1px solid var(--b4g-color-border-default);
+  border-radius: var(--b4g-radius-md);
   padding: var(--b4g-space-md);
   min-height: 320px;
   display: flex;
@@ -77,8 +92,9 @@ body {
 }
 
 .message-list__empty {
-  color: var(--b4g-color-semantic-text-muted);
-  font-size: var(--b4g-font-size-sm);
+  color: var(--b4g-color-text-muted);
+  font-size: var(--b4g-type-caption-size);
+  line-height: var(--b4g-type-caption-line-height);
 }
 
 .message {
@@ -89,12 +105,15 @@ body {
 
 .message--user {
   align-self: flex-end;
-  background: var(--b4g-color-brand-surface-alt);
+  background: var(--b4g-color-accent-default);
+  color: var(--b4g-color-on-accent);
 }
 
 .message--assistant {
   align-self: flex-start;
-  background: var(--b4g-color-neutral-800);
+  background: var(--b4g-color-bg-canvas);
+  color: var(--b4g-color-text-primary);
+  border: 1px solid var(--b4g-color-border-default);
 }
 
 .message--pending {
@@ -103,17 +122,23 @@ body {
 
 .message__role {
   display: block;
-  font-size: var(--b4g-font-size-xs);
-  font-weight: var(--b4g-font-weight-medium);
-  color: var(--b4g-color-semantic-text-muted);
+  font-size: var(--b4g-type-label-size);
+  font-weight: var(--b4g-type-label-weight);
+  line-height: var(--b4g-type-label-line-height);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin-bottom: var(--b4g-space-xs);
+  /* Muted relative to whichever text color the bubble sets — text-muted
+     itself is calibrated against bg.canvas/bg.panel and reads too flat on
+     the accent-filled user bubble, so lean on opacity instead. */
+  opacity: 0.75;
 }
 
 .message__content {
   margin: 0;
   white-space: pre-wrap;
+  font-size: var(--b4g-type-body-size);
+  line-height: var(--b4g-type-body-line-height);
 }
 
 .message-input {
@@ -123,33 +148,131 @@ body {
 
 .message-input input {
   flex: 1;
-  font-family: var(--b4g-font-body);
-  font-size: var(--b4g-font-size-md);
+  font-size: var(--b4g-type-body-size);
+  line-height: var(--b4g-type-body-line-height);
   padding: var(--b4g-space-sm) var(--b4g-space-md);
   border-radius: var(--b4g-radius-md);
-  border: 1px solid var(--b4g-color-neutral-200);
-  background: var(--b4g-color-neutral-900);
-  color: var(--b4g-color-semantic-text);
+  border: 1px solid var(--b4g-color-border-default);
+  background: var(--b4g-color-bg-panel);
+  color: var(--b4g-color-text-primary);
+}
+
+.message-input input::placeholder {
+  color: var(--b4g-color-text-muted);
 }
 
 .message-input button {
-  font-family: var(--b4g-font-body);
-  font-size: var(--b4g-font-size-md);
-  font-weight: var(--b4g-font-weight-medium);
+  font-size: var(--b4g-type-body-size);
+  font-weight: var(--b4g-type-label-weight);
+  line-height: var(--b4g-type-body-line-height);
   padding: var(--b4g-space-sm) var(--b4g-space-lg);
   border-radius: var(--b4g-radius-md);
   border: none;
-  background: var(--b4g-color-brand-primary);
-  color: var(--b4g-color-neutral-900);
+  background: var(--b4g-color-accent-default);
+  color: var(--b4g-color-on-accent);
   cursor: pointer;
-  transition: background var(--b4g-motion-duration-base) var(--b4g-motion-easing-standard);
+  transition:
+    filter 150ms ease,
+    background 150ms ease;
 }
 
 .message-input button:hover:not(:disabled) {
-  background: var(--b4g-color-brand-primary-muted);
+  filter: brightness(1.12);
 }
 
 .message-input button:disabled {
-  background: var(--b4g-color-neutral-300);
+  background: var(--b4g-color-border-default);
+  color: var(--b4g-color-text-muted);
   cursor: not-allowed;
+}
+
+/* Galileo trace timeline — one accent color per span kind, echoing how the
+   dashboard itself distinguishes session/trace/agent/llm/tool records. */
+
+.trace-timeline {
+  margin-top: var(--b4g-space-sm);
+  padding-top: var(--b4g-space-sm);
+  border-top: 1px dashed var(--b4g-color-border-default);
+}
+
+.trace-timeline__summary {
+  cursor: pointer;
+  color: var(--b4g-color-accent-default);
+  font-size: var(--b4g-type-caption-size);
+  font-weight: var(--b4g-type-label-weight);
+  line-height: var(--b4g-type-caption-line-height);
+  user-select: none;
+}
+
+.trace-timeline__list {
+  list-style: none;
+  margin: var(--b4g-space-sm) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--b4g-space-xs);
+}
+
+.trace-timeline__row {
+  border-left: 2px solid var(--b4g-color-border-default);
+  padding-left: var(--b4g-space-sm);
+}
+
+.trace-timeline__row-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--b4g-space-xs);
+}
+
+.trace-timeline__badge {
+  display: inline-block;
+  padding: 0 var(--b4g-space-xs);
+  border-radius: var(--b4g-radius-full);
+  font-size: var(--b4g-type-label-size);
+  font-weight: var(--b4g-type-label-weight);
+  line-height: var(--b4g-type-label-line-height);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--b4g-color-on-accent);
+}
+
+.trace-timeline__badge--trace {
+  background: var(--b4g-color-accent-default);
+}
+
+.trace-timeline__badge--agent {
+  background: var(--b4g-color-accent-violet);
+}
+
+.trace-timeline__badge--llm {
+  background: var(--b4g-color-accent-cyan);
+}
+
+.trace-timeline__badge--tool {
+  background: var(--b4g-color-accent-success);
+}
+
+.trace-timeline__badge--error {
+  background: var(--b4g-color-accent-danger);
+}
+
+.trace-timeline__name {
+  font-size: var(--b4g-type-caption-size);
+  font-weight: var(--b4g-type-title-weight);
+  line-height: var(--b4g-type-caption-line-height);
+}
+
+.trace-timeline__meta {
+  color: var(--b4g-color-text-muted);
+  font-size: var(--b4g-type-label-size);
+  line-height: var(--b4g-type-label-line-height);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+
+.trace-timeline__commentary {
+  margin: var(--b4g-space-xs) 0 0;
+  color: var(--b4g-color-text-muted);
+  font-size: var(--b4g-type-caption-size);
+  line-height: var(--b4g-type-caption-line-height);
 }

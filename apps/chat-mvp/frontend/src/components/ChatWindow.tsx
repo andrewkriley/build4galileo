@@ -33,7 +33,10 @@ export function ChatWindow() {
     setError(null);
     try {
       const response = await sendChatMessage(message, sessionId, provider);
-      setMessages((prev) => [...prev, { role: "assistant", content: response.answer }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: response.answer, timeline: response.timeline },
+      ]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "chat request failed");
     } finally {
@@ -47,6 +50,11 @@ export function ChatWindow() {
         <h1>build4galileo chat MVP</h1>
         <ProviderSelector providers={providers} selected={provider} onChange={setProvider} />
       </header>
+      <p className="chat-window__session-note">
+        This browser tab is one Galileo <strong>session</strong> (<code>{sessionId}</code>). Every
+        message you send below opens one <strong>trace</strong> inside it, made of nested{" "}
+        <strong>spans</strong> — expand a reply's "Galileo trace" to see them.
+      </p>
       {error && <p className="chat-window__error">{error}</p>}
       <MessageList messages={messages} pending={pending} />
       <MessageInput disabled={pending || providers.length === 0} onSend={handleSend} />

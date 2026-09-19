@@ -1,7 +1,6 @@
 """b4g-core: reusable session/trace/span + provider-agnostic agent composition.
 
-See core/README.md for the design pattern this package extracts from
-cl-ai-builders' Splunk workshop app.
+See core/README.md for the design.
 """
 
 from .agents import Agent, run_turn

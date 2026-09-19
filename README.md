@@ -1,15 +1,16 @@
 # build4galileo
 
+![build4galileo chat MVP — a chat turn with its Galileo trace expanded, showing the supervisor → classifier → worker → llm/tool span tree](docs/chat-mvp-screenshot.png)
+
 A reusable, provider-agnostic pattern for building agentic AI workers,
 workflows, and applications with well-structured sessions, traces, and
 spans — plus a chat MVP that's the first thing built on it.
 
-This repo extracts the agent and observability logic from
-[cl-ai-builders](https://github.com/andrewkriley/cl-ai-builders) (a
-Splunk-specific workshop app) into `core/`, a small standalone library,
-generalizing what was three hardcoded per-provider loops and a fixed
-3-tier agent shape into one composable pattern. See
-[`core/README.md`](core/README.md) for exactly what changed and why.
+`core/` is a small, standalone library for that pattern: one composable
+`Agent` primitive (router or leaf worker) instead of hardcoded per-provider
+loops or a fixed agent shape, plus a provider-agnostic `LLMProvider`
+interface with adapters for Anthropic, OpenAI, and Gemini. See
+[`core/README.md`](core/README.md) for the design.
 
 ## What you'll build
 
@@ -25,12 +26,20 @@ A chat app whose agent:
    through a provider-agnostic interface.
 4. Lets the LLM call a demo MCP server's tools — `system_info`,
    `file_search` (sandboxed, path-traversal guarded), `http_ping`
-   (SSRF-guarded) — with the same round-cap and repeated-call safety nets
-   cl-ai-builders used against Splunk MCP.
+   (SSRF-guarded) — guarded by a round cap and a repeated-identical-call
+   detector so a confused model can't loop forever.
 5. Traces each turn to Galileo, structured as `session -> trace ->
    agent(supervisor) -> [agent(classifier), agent(worker) -> [llm, tool,
    ...]]` — every turn in one browser conversation is grouped under one
-   Galileo session.
+   Galileo session, auto-named from a 5-word summary of the conversation's
+   opening question (e.g. `build4galileo-platform-host-running-<id>`)
+   instead of a bare UUID.
+6. Shows that same session/trace/span structure back in its own UI: every
+   assistant reply has a collapsible "Galileo trace" — a color-coded,
+   nested timeline with plain-English commentary per span (see the
+   screenshot above) — built from the same trace/span events the app sends
+   to Galileo, not a read-back from Galileo's API (see `app/timeline.py`
+   and `Tracer.on_event` in `core/`).
 
 ```
  Browser (React chat UI)
@@ -54,8 +63,8 @@ A chat app whose agent:
 |---|---|
 | [`core/`](core/README.md) | Reusable `b4g-core` library: Session/Trace/Span tracer, `LLMProvider` + 3 adapters, composable `Agent`, `ToolLoopGuard` |
 | `apps/chat-mvp/backend/` | FastAPI app (`/chat`, `/config`) + the demo MCP server, wiring `core` into a concrete supervisor→classifier→worker tree |
-| `apps/chat-mvp/frontend/` | Vite + React + TypeScript chat UI, themed from `andrewkriley/design-system`'s `business-venture` tokens |
-| `scripts/sync-tokens.mjs` | Pulls and resolves design tokens from `design-system` into `apps/chat-mvp/frontend/src/styles/tokens.css` (committed, manually re-run) |
+| `apps/chat-mvp/frontend/` | Vite + React + TypeScript chat UI, themed from `andrewkriley/design-system`'s `therileys-team` pattern (self-contained, dark-only token set) |
+| `scripts/sync-tokens.mjs` | Pulls and resolves `therileys-team` tokens from `design-system` into `apps/chat-mvp/frontend/src/styles/tokens.css` (committed, manually re-run) |
 
 ## Prerequisites
 
@@ -87,8 +96,9 @@ back in two terminals for some reason.
 
 Open the frontend's local URL, pick a provider in the header dropdown, and
 ask something like "what CPU does this host have?", "find the readme in
-the sandbox", or "is 1.1.1.1 reachable?" — then check the Galileo dashboard
-for the resulting session/trace/span structure.
+the sandbox", or "is 1.1.1.1 reachable?" — then expand the reply's "Galileo
+trace" to see the session/trace/span structure right there, or check the
+Galileo dashboard for the same thing.
 
 ## Testing
 
@@ -102,15 +112,27 @@ directly — `./dev` is just a convenience wrapper around the same commands.)
 
 ## Known limitations
 
-cl-ai-builders documented an unresolved, Galileo-backend-side bug: in a
-real multi-round tool-calling conversation, some `llm` spans can silently
-fail to reach Galileo (every `tool` span and the trace's own input/output
-are unaffected). Several mitigations were tried upstream (bounding payload
-size, async clients, per-span flush, `mode="distributed"`) and none fixed
-it. This repo carries the same risk — a local durable trace store was
-considered as a hardening measure and deliberately left out of this MVP for
-simplicity; see `core/README.md`. It's an observability gap only; the
-chat app's answers are correct regardless.
+In a real multi-round tool-calling conversation, some `llm` spans could
+silently fail to reach Galileo. The cause turned out to be reachable from
+our side: `AnthropicProvider.append_assistant_turn` fed
+the Anthropic SDK's raw response objects back into the message list used
+for `logged_input`, and from round 2 of any tool-calling turn onward,
+`add_llm_span` would throw a `TypeError` trying to JSON-encode them —
+silently, because the Galileo SDK mutes its own `"galileo"` logger by
+default. Fixed in `AnthropicProvider` (the OpenAI and Gemini adapters
+already flattened their logged content and were never affected), and
+`GalileoTracer` now calls `galileo.enable_console_logging()` plus a
+`flush(on_error=...)` hook so any *other* Galileo ingestion failure logs
+loudly instead of vanishing. What's left is inherent to the SDK, not fixed
+by application code: `flush()` is designed to swallow ingestion errors
+rather than raise, so a trace can still fail to reach Galileo (network
+blip, a schema the ingest API rejects) without failing the chat request —
+it'll just be logged now instead of silent. A local durable trace store
+was considered as a further hardening measure and deliberately left out of
+this MVP for simplicity; see `core/README.md`. It's an observability gap
+only; the chat app's answers are correct regardless, and — new in this
+version — the chat UI's own "Galileo trace" timeline gives you a
+same-session way to sanity-check span shape without needing the dashboard.
 
 ## License
 

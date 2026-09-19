@@ -1,15 +1,20 @@
 #!/usr/bin/env node
 /**
- * Pulls design tokens from andrewkriley/design-system (shared.json +
- * business-venture.json — build4galileo's brand profile), resolves
- * `{path.to.token}` references per that repo's CONSUME.md, and writes
- * resolved CSS custom properties to
+ * Pulls design tokens from andrewkriley/design-system's therileys-team
+ * pattern (design-system/tokens/therileys-team.json) — build4galileo's
+ * default/primary token set — and writes resolved CSS custom properties to
  * apps/chat-mvp/frontend/src/styles/tokens.css.
  *
+ * therileys-team is a token-only pattern (bg/text/border/accent color
+ * roles, a space/radius scale, and type styles), not a brand-voice profile:
+ * there's no manifest/voice to apply, and per the design system's own docs
+ * it does NOT merge with tokens/shared.json — it's self-contained. It's
+ * also dark-only (meta.mode: "Dark"), so there's no light variant here.
+ *
  * Deliberately NOT run at build time or in CI: output is committed, and
- * this script is re-run manually when the upstream brand tokens change —
- * a token update becomes a normal reviewable diff, not something the
- * frontend build silently drifts on. Run from the repo root:
+ * this script is re-run manually when the upstream tokens change — a token
+ * update becomes a normal reviewable diff, not something the frontend
+ * build silently drifts on. Run from the repo root:
  *
  *   node scripts/sync-tokens.mjs
  */
@@ -22,8 +27,15 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUTPUT_PATH = join(REPO_ROOT, "apps/chat-mvp/frontend/src/styles/tokens.css");
 
 const RAW_BASE = "https://raw.githubusercontent.com/andrewkriley/design-system/main/design-system/tokens";
-const SOURCES = ["shared.json", "business-venture.json"];
+const SOURCE = "therileys-team.json";
 const CSS_VAR_PREFIX = "--b4g";
+
+// therileys-team stores px-scale groups as bare numbers rather than this
+// repo's own `{ value: "1rem" }` leaves (see flattenTokens's note on
+// "external token sets" in design-system/demo/app.js) — a plain number
+// needs a unit added to become a valid CSS value.
+const PX_GROUPS = ["space", "radius", "type"];
+const UNITLESS_TYPE_KEYS = new Set(["weight"]);
 
 async function fetchTokenFile(name) {
   const response = await fetch(`${RAW_BASE}/${name}`);
@@ -37,62 +49,70 @@ function isTokenLeaf(node) {
   return node !== null && typeof node === "object" && "value" in node;
 }
 
-function deepMerge(target, source) {
-  for (const [key, value] of Object.entries(source)) {
-    if (isTokenLeaf(value) || typeof value !== "object" || value === null) {
-      target[key] = value;
-    } else {
-      target[key] = deepMerge(target[key] && typeof target[key] === "object" ? target[key] : {}, value);
-    }
-  }
-  return target;
-}
-
 function getByPath(tree, path) {
   return path.split(".").reduce((node, key) => (node ? node[key] : undefined), tree);
 }
 
-function resolveValue(tree, value, seen = new Set()) {
-  const match = typeof value === "string" && value.match(/^\{([\w.]+)\}$/);
+// Resolves `{a.b.c}` references. Handles both this repo's own
+// `{ value: ... }` leaves and therileys-team's bare literal leaves.
+function resolveValue(tree, rawValue, seen = new Set()) {
+  const match = typeof rawValue === "string" && rawValue.match(/^\{([\w.]+)\}$/);
   if (!match) {
-    return value;
+    return rawValue;
   }
   const refPath = match[1];
   if (seen.has(refPath)) {
     throw new Error(`circular token reference: ${[...seen, refPath].join(" -> ")}`);
   }
   const target = getByPath(tree, refPath);
-  if (!isTokenLeaf(target)) {
+  const targetValue = isTokenLeaf(target) ? target.value : target;
+  if (targetValue === undefined) {
     throw new Error(`unresolved token reference: {${refPath}}`);
   }
-  return resolveValue(tree, target.value, new Set([...seen, refPath]));
+  return resolveValue(tree, targetValue, new Set([...seen, refPath]));
 }
 
 function toKebabSegment(segment) {
   return segment.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
 }
 
-function flattenToCssVars(tree, prefixParts, tree_root, out) {
+function needsPxUnit(prefixParts, leafKey) {
+  const [group] = prefixParts;
+  if (!PX_GROUPS.includes(group)) return false;
+  if (group === "type" && UNITLESS_TYPE_KEYS.has(leafKey)) return false;
+  return true;
+}
+
+function flattenToCssVars(tree, prefixParts, treeRoot, out) {
   for (const [key, node] of Object.entries(tree)) {
+    if (key.startsWith("$") || key === "meta") continue; // metadata, not a token
     const nextParts = [...prefixParts, toKebabSegment(key)];
-    if (isTokenLeaf(node)) {
-      const varName = `${CSS_VAR_PREFIX}-${nextParts.join("-")}`;
-      out.push([varName, resolveValue(tree_root, node.value)]);
-    } else if (typeof node === "object" && node !== null) {
-      flattenToCssVars(node, nextParts, tree_root, out);
+    if (node !== null && typeof node === "object" && !isTokenLeaf(node)) {
+      flattenToCssVars(node, nextParts, treeRoot, out);
+      continue;
     }
+    const rawValue = isTokenLeaf(node) ? node.value : node;
+    const resolved = resolveValue(treeRoot, rawValue);
+    const varName = `${CSS_VAR_PREFIX}-${nextParts.join("-")}`;
+    const cssValue =
+      typeof resolved === "number" && needsPxUnit(prefixParts, key) ? `${resolved}px` : resolved;
+    out.push([varName, cssValue]);
   }
   return out;
 }
 
 async function main() {
-  const files = await Promise.all(SOURCES.map(fetchTokenFile));
-  const merged = files.reduce((acc, file) => deepMerge(acc, file), {});
-  const cssVars = flattenToCssVars(merged, [], merged, []);
+  const tokens = await fetchTokenFile(SOURCE);
+  const cssVars = flattenToCssVars(tokens, [], tokens, []);
+
+  // Mid-bright accents (see design-system/demo/app.js's withPatternColorAliases)
+  // need dark text on filled surfaces, not white — alias it once so components
+  // reference *why* rather than hardcoding which token that dark color is.
+  cssVars.push([`${CSS_VAR_PREFIX}-color-on-accent`, `var(${CSS_VAR_PREFIX}-color-bg-canvas)`]);
 
   const lines = [
     "/* AUTO-GENERATED by scripts/sync-tokens.mjs — do not edit by hand. */",
-    "/* Source: andrewkriley/design-system tokens/{shared,business-venture}.json */",
+    "/* Source: andrewkriley/design-system tokens/therileys-team.json (self-contained, dark-only) */",
     ":root {",
     ...cssVars.map(([name, value]) => `  ${name}: ${value};`),
     "}",

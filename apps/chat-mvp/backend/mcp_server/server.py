@@ -5,7 +5,7 @@ the chat MVP backend via `b4g_core.mcp.stdio_mcp_session` — see
 `app/main.py`. Running as a separate subprocess (rather than calling these
 functions in-process) is deliberate: it's what keeps "the agent talks to
 tools as a swappable, standard-protocol service" part of the demonstrated
-pattern, matching how cl-ai-builders talked to Splunk MCP over the network.
+pattern, the same way a remote MCP server over the network would be.
 """
 
 from __future__ import annotations

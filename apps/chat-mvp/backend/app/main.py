@@ -2,25 +2,25 @@
 
 `POST /chat` runs one turn through the core session/trace/agent pattern
 (see `b4g_core` and this app's `agents.py`); `GET /config` reports which
-LLM providers have a key configured, so the frontend's provider dropdown
-only offers ones that'll actually work — mirroring cl-ai-builders'
-`scripts/check_env.py` readiness check, surfaced over HTTP instead of a CLI
-script since this app has a real frontend.
+LLM providers have a key configured, over HTTP, so the frontend's provider
+dropdown only offers ones that'll actually work.
 
 The demo MCP server is spawned once, as a subprocess, at startup (not
 per-request) and its `ClientSession` is reused for the app's lifetime —
 cheaper than paying subprocess-startup cost on every chat turn. One shared
-session across concurrent requests is a known simplification (matches
-cl-ai-builders' own "single-user demo" scope; see that repo's `app/agent.py`
-docstring) — provider calls are synchronous and block the event loop for
-their duration, which naturally serializes most of a turn anyway.
+session across concurrent requests is a known simplification (this is a
+single-user demo, not a multi-tenant service) — provider calls are
+synchronous and block the event loop for their duration, which naturally
+serializes most of a turn anyway.
 """
 
 from __future__ import annotations
 
 import sys
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from b4g_core import GalileoTracer, run_turn
 from b4g_core.mcp import call_tool as mcp_call_tool
@@ -31,6 +31,7 @@ from pydantic import BaseModel
 
 from . import config
 from .agents import build_supervisor
+from .timeline import build_timeline
 
 _MCP_SERVER_ARGS = ["-m", "mcp_server.server"]
 
@@ -72,6 +73,10 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
+    # This turn's Galileo trace, as a flat ordered list the frontend renders
+    # as a nested timeline — see `app/timeline.py` and
+    # `b4g_core.tracing.tracer`'s `on_event` hook for where it comes from.
+    timeline: list[dict[str, Any]] = []
 
 
 @app.post("/chat", response_model=ChatResponse)
@@ -83,8 +88,20 @@ async def chat(req: ChatRequest) -> ChatResponse:
         return await mcp_call_tool(state.mcp_session, name, arguments)
 
     supervisor = build_supervisor(req.provider, state.mcp_tools, call_tool)
-    answer = await run_turn(state.tracer, req.session_id, supervisor, req.message)
-    return ChatResponse(answer=answer)
+
+    events: list[dict[str, Any]] = []
+    turn_started_at = time.time()
+    # `state.tracer` is one shared instance for the app's lifetime (see this
+    # module's docstring on the single-user demo simplification), so this is
+    # only safe because a turn's provider calls are synchronous and block
+    # the event loop — no other request's events can interleave here.
+    state.tracer.on_event = events.append
+    try:
+        answer = await run_turn(state.tracer, req.session_id, supervisor, req.message)
+    finally:
+        state.tracer.on_event = None
+
+    return ChatResponse(answer=answer, timeline=build_timeline(events, turn_started_at))
 
 
 @app.get("/config")

@@ -1,12 +1,11 @@
 """Provider-agnostic LLM calling.
 
-cl-ai-builders' `app/agent.py` branched on provider three separate ways
-(`_openai_loop`/`_anthropic_loop`/`_gemini_loop`), each hand-rolling its own
-message format, tool-call extraction, and Galileo logging. `LLMProvider`
-collapses that to one interface: a single generic tool-calling loop (see
-`b4g_core.agents.agent`) drives any provider through the same four methods,
-and each adapter is the only place that still needs to know its provider's
-native shapes.
+`LLMProvider` is one interface instead of branching on provider with a
+separate hand-rolled loop function per provider, each with its own message
+format, tool-call extraction, and Galileo logging: a single generic
+tool-calling loop (see `b4g_core.agents.agent`) drives any provider through
+the same four methods, and each adapter is the only place that still needs
+to know its provider's native shapes.
 
 A conversation's `messages` value is intentionally opaque to core code —
 each provider keeps its own native message format (OpenAI's flat list with

@@ -3,10 +3,10 @@
 An `Agent`'s `call_tool` only needs `list_tools()` + `call_tool(name,
 arguments)`. Connecting over stdio to a local subprocess MCP server (the
 chat MVP's demo server) keeps "the agent talks to tools as a separate,
-swappable, standard-protocol service" part of the pattern — cl-ai-builders
-made the same call talking to a remote Splunk MCP server over
-streamable-http instead. Swapping transports later is a different
-`*_client` call here, not a rewrite of anything that calls this module.
+swappable, standard-protocol service" part of the pattern — MCP also
+supports remote transports like streamable-http. Swapping transports later
+is a different `*_client` call here, not a rewrite of anything that calls
+this module.
 """
 
 from __future__ import annotations

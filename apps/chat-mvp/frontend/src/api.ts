@@ -1,3 +1,5 @@
+import type { TimelineEvent } from "./types";
+
 const API_BASE_URL = "http://localhost:8000";
 
 export interface ConfigResponse {
@@ -7,6 +9,7 @@ export interface ConfigResponse {
 
 export interface ChatResponse {
   answer: string;
+  timeline: TimelineEvent[];
 }
 
 export async function fetchConfig(): Promise<ConfigResponse> {

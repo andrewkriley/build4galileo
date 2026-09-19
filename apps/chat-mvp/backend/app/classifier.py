@@ -1,10 +1,10 @@
 """Fast keyword-heuristic classifier — no extra LLM call.
 
-Mirrors cl-ai-builders' classifier: a plain keyword match, not a model
-call, so routing stays deterministic and free of extra API cost/latency.
-Categories map 1:1 to the demo MCP server's tools (see `app/agents.py`) —
-classification is real access-scoping (which tool the matched worker can
-call), not just persona selection.
+A plain keyword match, not a model call, so routing stays deterministic
+and free of extra API cost/latency. Categories map 1:1 to the demo MCP
+server's tools (see `app/agents.py`) — classification is real
+access-scoping (which tool the matched worker can call), not just persona
+selection.
 """
 
 from __future__ import annotations

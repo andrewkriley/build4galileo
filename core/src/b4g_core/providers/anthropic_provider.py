@@ -28,6 +28,20 @@ def _content_to_log_text(blocks: Any) -> str:
     return "\n".join(parts)
 
 
+def _log_safe_message(message: dict) -> dict:
+    """`messages` re-submitted to the Anthropic API after a tool-calling
+    round holds the SDK's own response content verbatim (a list of
+    TextBlock/ToolUseBlock pydantic objects, per `append_assistant_turn`) —
+    the API accepts that shape back, but it isn't JSON-serializable, and
+    Galileo's add_llm_span silently drops the whole span if any logged
+    message contains one. Flatten it the same way `logged_output` already
+    is, so every round's llm span actually reaches Galileo."""
+    content = message["content"]
+    if isinstance(content, list) and content and hasattr(content[0], "type"):
+        return {"role": message["role"], "content": _content_to_log_text(content)}
+    return message
+
+
 class AnthropicProvider(LLMProvider):
     name = "anthropic"
     model = MODEL
@@ -74,7 +88,7 @@ class AnthropicProvider(LLMProvider):
             num_output_tokens=response.usage.output_tokens,
             logged_input=[
                 {"role": "system", "content": system_prompt},
-                *messages[-_MAX_LOGGED_TURNS:],
+                *(_log_safe_message(m) for m in messages[-_MAX_LOGGED_TURNS:]),
             ],
             logged_output=_content_to_log_text(response.content),
             raw=response,

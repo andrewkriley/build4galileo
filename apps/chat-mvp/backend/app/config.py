@@ -21,5 +21,5 @@ _KEY_ENV_VARS = {
 
 def available_providers() -> list[str]:
     """Providers the chat UI's dropdown may actually offer — only ones with
-    a key set, mirroring cl-ai-builders' `/config` readiness check."""
+    a key actually set."""
     return [name for name, env_var in _KEY_ENV_VARS.items() if os.environ.get(env_var)]

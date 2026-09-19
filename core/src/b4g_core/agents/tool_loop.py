@@ -1,9 +1,8 @@
 """Reusable round-cap + repeated-identical-tool-call guard.
 
-cl-ai-builders reimplemented this by hand in each of its three per-provider
-loop functions (`_openai_loop`/`_anthropic_loop`/`_gemini_loop`), each with
-its own `seen_calls: set[...]` and `for _ in range(MAX_TURNS)`. One
-`ToolLoopGuard` instance does this once, for any provider's loop.
+One `ToolLoopGuard` instance does this once, for any provider's loop,
+instead of every per-provider loop hand-rolling its own `seen_calls:
+set[...]` and `for _ in range(MAX_TURNS)`.
 """
 
 from __future__ import annotations

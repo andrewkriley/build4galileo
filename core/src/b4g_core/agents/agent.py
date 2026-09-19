@@ -7,7 +7,7 @@ An `Agent` is either:
   a classifier "a fast heuristic, no extra LLM call" a structural property
   of the primitive rather than an accident of how one example app used it.
   Routing gets its own nested "classifier" agent span, a sibling of the
-  chosen child's span (not a wrapper around it) — matching cl-ai-builders'
+  chosen child's span (not a wrapper around it), producing a
   `supervisor -> [classifier, worker -> [llm, tool, ...]]` trace shape.
 - a **leaf worker**: has a `provider` and `mcp_tools`, and runs a generic
   provider-agnostic tool-calling loop (round cap + repeated-call guard via
@@ -19,8 +19,8 @@ span nesting always mirrors the actual call graph (see
 bookkeeping.
 
 This intentionally supports single-child routing only: a router picks
-exactly one child per turn. cl-ai-builders' fan-out-to-multiple-categories-
-then-synthesize behavior is a natural extension of this primitive, not
+exactly one child per turn. Fanning out to multiple categories and
+synthesizing across them is a natural extension of this primitive, not
 implemented here — see core/README.md.
 """
 

@@ -16,11 +16,13 @@ from __future__ import annotations
 
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from typing import Any
 
 from .types import Session, Span, SpanType, Trace, new_id
+
+EventListener = Callable[[dict[str, Any]], None]
 
 
 class SpanHandle:
@@ -82,6 +84,37 @@ class TraceHandle:
         yield from _run_span(self._tracer, handle)
 
 
+def _emit_event(tracer: Tracer, kind: str, record: Trace | Span) -> None:
+    """Notify `tracer.on_event` (if set) that a trace/span just finished.
+
+    Fires *in addition to* `_persist_*` — it's a read-only side channel for
+    a caller that wants to observe what's being sent to the tracer backend
+    (e.g. the chat MVP surfacing "here's the Galileo trace for this turn"
+    in its own UI) without that caller needing to know anything about
+    Galileo's own API.
+    """
+    if tracer.on_event is None:
+        return
+    duration_ms = None
+    if record.ended_at is not None:
+        duration_ms = (record.ended_at - record.started_at) * 1000
+    tracer.on_event(
+        {
+            "kind": kind,
+            "id": record.id,
+            "parent_id": getattr(record, "parent_span_id", None),
+            "span_type": getattr(record, "span_type", None),
+            "name": getattr(record, "name", "turn"),
+            "input": record.input,
+            "output": record.output,
+            "status": record.status,
+            "metadata": dict(getattr(record, "metadata", {})),
+            "started_at": record.started_at,
+            "duration_ms": duration_ms,
+        }
+    )
+
+
 def _run_span(tracer: Tracer, handle: SpanHandle) -> Iterator[SpanHandle]:
     span = handle.span_record
     tracer._persist_span_start(span)
@@ -94,10 +127,16 @@ def _run_span(tracer: Tracer, handle: SpanHandle) -> Iterator[SpanHandle]:
     finally:
         span.ended_at = time.time()
         tracer._persist_span_end(span)
+        _emit_event(tracer, "span", span)
 
 
 class Tracer(ABC):
     """Base class for a Session/Trace/Span backend."""
+
+    # Set by a caller that wants a copy of every finished trace/span
+    # (see `_emit_event`) — None by default, so observing costs nothing
+    # unless something actually asks for it.
+    on_event: EventListener | None = None
 
     def start_session(self, session_id: str, metadata: dict[str, Any] | None = None) -> Session:
         session = Session(id=session_id, metadata=metadata or {})
@@ -118,6 +157,7 @@ class Tracer(ABC):
         finally:
             trace.ended_at = time.time()
             self._persist_trace_end(trace)
+            _emit_event(self, "trace", trace)
 
     @abstractmethod
     def _persist_session(self, session: Session) -> None: ...

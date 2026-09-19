@@ -1,25 +1,18 @@
 # b4g-core
 
 A small, reusable pattern for building agentic AI workers/workflows/apps
-with well-structured sessions, traces, and spans — extracted from
-[cl-ai-builders](https://github.com/andrewkriley/cl-ai-builders), a
-Splunk-specific workshop app whose agent and observability logic hard-wired
-a fixed 3-tier shape and per-provider branching directly into application
-code. This package is that reusable underneath, generalized; `apps/chat-mvp`
-in this repo is one concrete consumer of it.
+with well-structured sessions, traces, and spans. `apps/chat-mvp` in this
+repo is one concrete consumer of it.
 
-## What changed vs. cl-ai-builders, and why
+## Design decisions
 
-**Provider abstraction.** cl-ai-builders had three separate loop functions
-(`_openai_loop`/`_anthropic_loop`/`_gemini_loop`), each hand-rolling its own
-message format and tool-call extraction, and Galileo logging was
-*asymmetric* — OpenAI got Galileo's native `galileo.openai` auto-wrapper,
-Anthropic/Gemini got hand-built spans. `providers.LLMProvider` is one
-interface (`initial_messages`/`to_provider_tools`/`complete`/
-`append_assistant_turn`/`append_tool_results`); `agents.Agent` drives any
-provider through the same generic loop, and `tracing.GalileoTracer` logs
-every provider's `llm` span through the identical `add_llm_span` call — no
-provider gets a structurally different span shape.
+**Provider abstraction.** `providers.LLMProvider` is one interface
+(`initial_messages`/`to_provider_tools`/`complete`/`append_assistant_turn`/
+`append_tool_results`); `agents.Agent` drives any provider through the same
+generic loop, and `tracing.GalileoTracer` logs every provider's `llm` span
+through the identical `add_llm_span` call — no separate per-provider loop
+function, and no provider gets a structurally different span shape or a
+different Galileo logging path than the others.
 
 **A real tracer abstraction.** `tracing.Tracer` defines backend-agnostic
 `Session`/`Trace`/`Span` primitives as context managers
@@ -32,33 +25,32 @@ Application code never imports anything Galileo-specific; only
 `GalileoTracer` does. Swapping to a different observability backend later
 means writing one new `Tracer` subclass, not touching agent code.
 
-**N-tier `Agent` composition instead of a hardcoded 3-tier shape.**
-cl-ai-builders' `supervisor -> classifier -> worker` was the literal
-structure of `app/agent.py`. Here it's a *configuration* of one primitive:
-an `Agent` is either a **router** (`children` + a `route` function, no
-`provider` — this is what keeps a classifier "a fast heuristic, no extra
-LLM call" a structural property, not an accident) or a **leaf worker** (a
-`provider` + scoped `mcp_tools`). Routers can nest arbitrarily deep; span
-nesting always mirrors the actual call graph. `apps/chat-mvp` still builds
-a 3-tier supervisor→classifier→worker for its MVP, but that's now one
-particular composition, not the primitive's structure.
+**N-tier `Agent` composition instead of a hardcoded shape.** An `Agent` is
+either a **router** (`children` + a `route` function, no `provider` — this
+is what keeps a classifier "a fast heuristic, no extra LLM call" a
+structural property, not an accident) or a **leaf worker** (a `provider` +
+scoped `mcp_tools`). Routers can nest arbitrarily deep; span nesting always
+mirrors the actual call graph. `apps/chat-mvp` builds a 3-tier
+supervisor→classifier→worker for its MVP, but that's one particular
+composition of the primitive, not the primitive's structure.
 
 > Scope note: routing is single-child only — a router picks exactly one
-> child per turn. cl-ai-builders' fan-out-to-multiple-categories-then-
-> synthesize behavior (for a question that spans more than one category) is
-> a natural extension of this primitive, deliberately not implemented here.
+> child per turn. Fanning out to multiple categories and synthesizing
+> across them (for a question that spans more than one) is a natural
+> extension of this primitive, deliberately not implemented here.
 
 **A reusable tool-loop guard.** The round cap + repeated-identical-tool-call
 guard (`agents.ToolLoopGuard`) is one utility any worker's loop uses, not
 reimplemented per provider.
 
 **Tracer backend: Galileo only, synchronous.** A local durable trace store
-(to harden against cl-ai-builders' documented, unresolved bug where some
-`llm` spans silently don't reach Galileo on multi-round conversations — see
-that repo's README Troubleshooting section) was considered and explicitly
-decided against for this repo, in favor of simplicity. The `Tracer`
-interface stays backend-agnostic by design even though only `GalileoTracer`
-ships today — that's a stated non-goal-for-now, not an oversight.
+(to harden against Galileo's own `flush()`/ingest path occasionally
+failing to log a span on multi-round conversations — see
+`tracing/galileo_tracer.py` and the root README's "Known limitations") was
+considered and explicitly decided against for this repo, in favor of
+simplicity. The `Tracer` interface stays backend-agnostic by design even
+though only `GalileoTracer` ships today — that's a stated non-goal-for-now,
+not an oversight.
 
 ## Layout
 

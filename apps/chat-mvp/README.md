@@ -11,8 +11,11 @@ cd apps/chat-mvp/backend
 uv run uvicorn app.main:app --reload
 ```
 
-- `POST /chat` — `{message, session_id, provider}` → `{answer}`. Runs one
-  turn through `b4g_core.run_turn`.
+- `POST /chat` — `{message, session_id, provider}` → `{answer, timeline}`.
+  Runs one turn through `b4g_core.run_turn`; `timeline` is that turn's
+  session/trace/span structure, formatted for the frontend's own "Galileo
+  trace" display (see `app/timeline.py` — it mirrors what gets sent to
+  Galileo, it isn't read back from Galileo's API).
 - `GET /config` — `{available_providers, default_provider}`, so the
   frontend's dropdown only offers providers with a key actually set.
 
@@ -28,6 +31,7 @@ one `ClientSession` open for the app's lifetime.
 | `app/agents.py` | Builds the supervisor/classifier/worker `Agent` tree for one turn |
 | `app/classifier.py` | Keyword-heuristic classifier: `system` / `files` / `network` |
 | `app/config.py` | Env config + which providers have keys set |
+| `app/timeline.py` | Turns one turn's trace/span events into the frontend's "Galileo trace" display |
 | `mcp_server/server.py` | Demo MCP server: `system_info`, `file_search`, `http_ping` |
 | `mcp_server/sandbox.py` | Path-containment guard for `file_search` |
 | `mcp_server/sandbox_root/` | Sample files `file_search` can find |
@@ -50,10 +54,12 @@ npm install
 npm run dev
 ```
 
-Themed from `andrewkriley/design-system`'s `business-venture` tokens
+Themed from `andrewkriley/design-system`'s `therileys-team` pattern — a
+self-contained, dark-only token set, not merged with `shared.json`
 (`src/styles/tokens.css`, regenerated via `node scripts/sync-tokens.mjs`
 from the repo root — see that script's docstring for why it's manual, not
-build-time).
+build-time). Each assistant reply also renders its own turn's trace as a
+collapsible "Galileo trace" (`src/components/TraceTimeline.tsx`).
 
 ```
 npm run lint       # eslint

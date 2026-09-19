@@ -1,4 +1,5 @@
 import type { ChatMessage } from "../types";
+import { TraceTimeline } from "./TraceTimeline";
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -17,6 +18,7 @@ export function MessageList({ messages, pending }: MessageListProps) {
         <div key={index} className={`message message--${message.role}`}>
           <span className="message__role">{message.role}</span>
           <p className="message__content">{message.content}</p>
+          {message.timeline && <TraceTimeline events={message.timeline} />}
         </div>
       ))}
       {pending && (
