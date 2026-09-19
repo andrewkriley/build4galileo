@@ -11,6 +11,7 @@ build/
 node_modules/
 apps/chat-mvp/frontend/dist/
 npm-debug.log*
+*.tsbuildinfo
 
 # Env
 .env

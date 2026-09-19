@@ -1,0 +1,55 @@
+import { useEffect, useState } from "react";
+
+import { fetchConfig, sendChatMessage } from "../api";
+import { getOrCreateSessionId } from "../session";
+import type { ChatMessage } from "../types";
+import { MessageInput } from "./MessageInput";
+import { MessageList } from "./MessageList";
+import { ProviderSelector } from "./ProviderSelector";
+
+const sessionId = getOrCreateSessionId();
+
+export function ChatWindow() {
+  const [providers, setProviders] = useState<string[]>([]);
+  const [provider, setProvider] = useState<string>("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchConfig()
+      .then((config) => {
+        setProviders(config.available_providers);
+        setProvider(config.default_provider);
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "failed to load /config");
+      });
+  }, []);
+
+  async function handleSend(message: string) {
+    setMessages((prev) => [...prev, { role: "user", content: message }]);
+    setPending(true);
+    setError(null);
+    try {
+      const response = await sendChatMessage(message, sessionId, provider);
+      setMessages((prev) => [...prev, { role: "assistant", content: response.answer }]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "chat request failed");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="chat-window">
+      <header className="chat-window__header">
+        <h1>build4galileo chat MVP</h1>
+        <ProviderSelector providers={providers} selected={provider} onChange={setProvider} />
+      </header>
+      {error && <p className="chat-window__error">{error}</p>}
+      <MessageList messages={messages} pending={pending} />
+      <MessageInput disabled={pending || providers.length === 0} onSend={handleSend} />
+    </div>
+  );
+}
