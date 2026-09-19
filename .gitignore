@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.uv/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+apps/chat-mvp/frontend/dist/
+npm-debug.log*
+
+# Env
+.env
+.env.local
+
+# Editors / OS
+.DS_Store
+.vscode/
+.idea/

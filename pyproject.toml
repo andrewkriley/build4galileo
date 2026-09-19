@@ -1,0 +1,24 @@
+[project]
+name = "build4galileo-workspace"
+version = "0.0.0"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8.0.0", "ruff>=0.6.0"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["core", "apps/chat-mvp/backend"]
+
+[tool.pytest.ini_options]
+testpaths = ["core/tests", "apps/chat-mvp/backend/tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

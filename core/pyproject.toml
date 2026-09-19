@@ -1,0 +1,19 @@
+[project]
+name = "b4g-core"
+version = "0.1.0"
+description = "Reusable session/trace/span + provider-agnostic agent composition pattern for agentic AI apps"
+requires-python = ">=3.11"
+dependencies = [
+    "galileo>=1.0.0",
+    "anthropic>=0.40.0",
+    "openai>=1.55.0",
+    "google-genai>=0.3.0",
+    "mcp>=1.1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/b4g_core"]
