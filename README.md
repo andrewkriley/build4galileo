@@ -70,22 +70,20 @@ A chat app whose agent:
 ```
 cp .env.example .env   # fill in your Galileo + at least one LLM provider key
 uv sync --all-packages
+cd apps/chat-mvp/frontend && npm install && cd ../../..
 ```
 
-Run the backend (spawns the demo MCP server as a subprocess on startup):
+Then run **`./dev`** — a controller script at the repo root that starts
+both the backend (FastAPI + demo MCP server) and the frontend (Vite) as one
+command, in one terminal, and stops both cleanly on Ctrl+C:
 
 ```
-cd apps/chat-mvp/backend
-uv run uvicorn app.main:app --reload
+./dev            # interactive menu: start both, run tests, lint, sync tokens, ...
+./dev start      # start both dev servers directly, no menu
 ```
 
-Run the frontend, in a second terminal:
-
-```
-cd apps/chat-mvp/frontend
-npm install
-npm run dev
-```
+`./dev backend` / `./dev frontend` run just one side, if you want that
+back in two terminals for some reason.
 
 Open the frontend's local URL, pick a provider in the header dropdown, and
 ask something like "what CPU does this host have?", "find the readme in
@@ -95,9 +93,12 @@ for the resulting session/trace/span structure.
 ## Testing
 
 ```
-uv run pytest          # core + backend — fully offline, no API keys needed
-cd apps/chat-mvp/frontend && npm run lint && npm run typecheck && npm run build
+./dev test      # pytest (core + backend, offline) + frontend lint/typecheck/build
+./dev lint      # ruff + eslint only
 ```
+
+(or run `uv run pytest` / `npm run lint && npm run typecheck && npm run build`
+directly — `./dev` is just a convenience wrapper around the same commands.)
 
 ## Known limitations
 

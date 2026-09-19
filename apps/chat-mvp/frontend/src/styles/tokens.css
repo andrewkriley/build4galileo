@@ -22,6 +22,8 @@
   --b4g-color-semantic-text-muted: #5c6370;
   --b4g-color-semantic-link: #4338ca;
   --b4g-color-semantic-link-hover: #ea580c;
+  --b4g-color-semantic-on-primary: #ffffff;
+  --b4g-color-semantic-on-accent: #ffffff;
   --b4g-font-family-sans: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
   --b4g-font-family-serif: 'Source Serif 4', 'Georgia', serif;
   --b4g-font-family-mono: 'JetBrains Mono', 'Consolas', monospace;
@@ -55,4 +57,12 @@
   --b4g-motion-duration-base: 200ms;
   --b4g-motion-duration-slow: 320ms;
   --b4g-motion-easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --b4g-dark-color-brand-primary: #4f46e5;
+  --b4g-dark-color-brand-primary-muted: #818cf8;
+  --b4g-dark-color-brand-surface: #0c0d0f;
+  --b4g-dark-color-brand-surface-alt: #181a1f;
+  --b4g-dark-color-semantic-text: #fafbfc;
+  --b4g-dark-color-semantic-text-muted: #b4bac5;
+  --b4g-dark-color-semantic-link: #818cf8;
+  --b4g-dark-color-semantic-link-hover: #ea580c;
 }

@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# build4galileo dev controller — one command for both dev processes plus
+# the other everyday tasks (tests, lint, token sync).
+#
+# Interactive menu:  ./dev
+# Direct:             ./dev start | backend | frontend | test | lint | tokens
+
+set -uo pipefail
+set -m # each backgrounded job gets its own process group, so stopping it
+       # also stops uvicorn/vite's real subprocess, not just its wrapper
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKEND_DIR="$ROOT_DIR/apps/chat-mvp/backend"
+FRONTEND_DIR="$ROOT_DIR/apps/chat-mvp/frontend"
+
+run_backend() {
+  (cd "$BACKEND_DIR" && uv run uvicorn app.main:app --reload)
+}
+
+run_frontend() {
+  (cd "$FRONTEND_DIR" && npm run dev)
+}
+
+run_dev() {
+  echo "Starting backend + frontend — Ctrl+C to stop both."
+  run_backend &
+  local backend_pid=$!
+  run_frontend &
+  local frontend_pid=$!
+
+  trap 'echo; echo "Stopping..."; kill -TERM -- "-$backend_pid" "-$frontend_pid" 2>/dev/null; wait 2>/dev/null' INT TERM
+  wait "$backend_pid" "$frontend_pid"
+  trap - INT TERM
+}
+
+run_tests() {
+  (cd "$ROOT_DIR" && uv run pytest) &&
+    (cd "$FRONTEND_DIR" && npm run lint && npm run typecheck && npm run build)
+}
+
+run_lint() {
+  (cd "$ROOT_DIR" && uv run ruff check .) &&
+    (cd "$FRONTEND_DIR" && npm run lint)
+}
+
+sync_tokens() {
+  node "$ROOT_DIR/scripts/sync-tokens.mjs"
+}
+
+show_menu() {
+  echo
+  echo "build4galileo dev controller"
+  PS3=$'> '
+  local options=(
+    "Start dev (backend + frontend)"
+    "Backend only"
+    "Frontend only"
+    "Run tests (pytest + frontend lint/typecheck/build)"
+    "Lint (ruff + eslint)"
+    "Sync design tokens from design-system"
+    "Quit"
+  )
+  select _ in "${options[@]}"; do
+    case "$REPLY" in
+      1) run_dev ;;
+      2) run_backend ;;
+      3) run_frontend ;;
+      4) run_tests ;;
+      5) run_lint ;;
+      6) sync_tokens ;;
+      7) exit 0 ;;
+      *) echo "Not a valid option: $REPLY" ;;
+    esac
+    break
+  done
+}
+
+case "${1:-}" in
+  start) run_dev ;;
+  backend) run_backend ;;
+  frontend) run_frontend ;;
+  test) run_tests ;;
+  lint) run_lint ;;
+  tokens) sync_tokens ;;
+  "")
+    while true; do
+      show_menu
+    done
+    ;;
+  *)
+    echo "Unknown command: $1" >&2
+    echo "Usage: ./dev [start|backend|frontend|test|lint|tokens]" >&2
+    exit 1
+    ;;
+esac
