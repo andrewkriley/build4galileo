@@ -69,6 +69,7 @@ class ChatRequest(BaseModel):
     message: str
     session_id: str
     provider: str = config.DEFAULT_LLM_PROVIDER
+    model: str | None = None
 
 
 class ChatResponse(BaseModel):
@@ -87,7 +88,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
     async def call_tool(name: str, arguments: dict) -> str:
         return await mcp_call_tool(state.mcp_session, name, arguments)
 
-    supervisor = build_supervisor(req.provider, state.mcp_tools, call_tool)
+    supervisor = build_supervisor(req.provider, req.model, state.mcp_tools, call_tool)
 
     events: list[dict[str, Any]] = []
     turn_started_at = time.time()
@@ -106,7 +107,9 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
 @app.get("/config")
 async def get_config() -> dict:
+    providers = config.available_providers()
     return {
-        "available_providers": config.available_providers(),
+        "available_providers": providers,
         "default_provider": config.DEFAULT_LLM_PROVIDER,
+        "models": {provider: config.available_models(provider) for provider in providers},
     }

@@ -57,7 +57,7 @@ not an oversight.
 ```
 src/b4g_core/
 ├── tracing/    Session/Trace/Span + the Tracer protocol, GalileoTracer, NoopTracer
-├── providers/  LLMProvider + Anthropic/OpenAI/Gemini adapters + FakeProvider (tests)
+├── providers/  LLMProvider + Anthropic/OpenAI/Gemini/vLLM/Ollama adapters + FakeProvider (tests)
 ├── agents/     Agent (router/leaf composition), ToolLoopGuard, run_turn (session+trace glue)
 └── mcp/        thin MCP client wrapper (stdio transport)
 ```

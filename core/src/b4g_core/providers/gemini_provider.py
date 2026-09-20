@@ -33,9 +33,10 @@ class GeminiProvider(LLMProvider):
     name = "gemini"
     model = MODEL
 
-    def __init__(self, api_key: str | None = None) -> None:
+    def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
         from google import genai
 
+        self.model = model or MODEL
         self._client = genai.Client(api_key=api_key or os.environ["GEMINI_API_KEY"])
 
     def initial_messages(self, user_message: str) -> list[Any]:

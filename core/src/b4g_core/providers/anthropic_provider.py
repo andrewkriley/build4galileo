@@ -46,9 +46,10 @@ class AnthropicProvider(LLMProvider):
     name = "anthropic"
     model = MODEL
 
-    def __init__(self, api_key: str | None = None) -> None:
+    def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
         from anthropic import Anthropic
 
+        self.model = model or MODEL
         self._client = Anthropic(api_key=api_key or os.environ["ANTHROPIC_API_KEY"])
 
     def initial_messages(self, user_message: str) -> list[dict]:

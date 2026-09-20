@@ -38,8 +38,10 @@ CATEGORY_TOOL_NAMES = {"system": "system_info", "files": "file_search", "network
 ToolCaller = Callable[[str, dict], Awaitable[str]]
 
 
-def build_supervisor(provider_name: str, mcp_tools: list[dict], call_tool: ToolCaller) -> Agent:
-    provider = PROVIDERS[provider_name]()
+def build_supervisor(
+    provider_name: str, model: str | None, mcp_tools: list[dict], call_tool: ToolCaller
+) -> Agent:
+    provider = PROVIDERS[provider_name](model=model) if model else PROVIDERS[provider_name]()
 
     workers = {
         category: Agent(

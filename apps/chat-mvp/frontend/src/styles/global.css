@@ -36,6 +36,12 @@ body {
   gap: var(--b4g-space-md);
 }
 
+.chat-window__model-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--b4g-space-sm);
+}
+
 .chat-window__header h1 {
   font-size: var(--b4g-type-display-size);
   font-weight: var(--b4g-type-display-weight);
